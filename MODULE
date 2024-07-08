@@ -1,0 +1,184 @@
+    PROC MAIN()
+        
+    !Go Back To Home Position
+    MoveJ Home,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    !Start with an open gripper
+    setDO GRIPPER, 0;
+    
+    !Ask the user for how many shafts
+    TPReadNum End_of_shaft, "Enter the number of shafts: ";
+    
+    !A loop to continue until there is no more shafts, this can be updated with the User input.
+    FOR i FROM 0 TO End_of_shaft DO 
+    
+    !Loop to increase the start to end of shafts
+    start := start +1; IF start >end_of_shaft THEN break; ENDIF
+
+    !Pick up the target starting from Shaft 1
+    Pick_Shaft;
+    
+    !Approach Measuring station & Open Gripper to leave the shaft
+    MoveL BackFromStop,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(Stop1,0,0,50),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(Stop1,0,0,-12),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 0; 
+    WaitTime 1;
+    
+    !Wait for measurements
+    WaitDI Di_Measurement,1;
+    
+    !Move up from shaft to not collide
+    MoveL offs(Stop1,0,0,60),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    !Go to relevant function     
+    IF Di_MeasurmentsGood = 1 AND Di_MeasurmentsRework = 0 AND Di_MeasurmentsScrap = 0 THEN
+    GOOD_FUNCTION;
+    ELSEIF Di_MeasurmentsRework = 1 AND Di_MeasurmentsScrap = 0 AND Di_MeasurmentsGood = 0 THEN
+    REWORK_FUNCTION;
+    ELSEIF Di_MeasurmentsScrap = 1 AND Di_MeasurmentsRework = 0 AND Di_MeasurmentsGood = 0 THEN
+    SCRAP_FUNCTION; 
+    ENDIF
+    
+    !Loops to increase the position to each of the stations
+    washerCol := washerCol +1;IF washerCol >5 THEN washerCol :=0;ENDIF
+    shaftCol := shaftCol +1;IF shaftCol >5 THEN shaftCol :=0;ENDIF
+      
+    !Go Back To Home Position
+    MoveJ Home,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+   
+    ENDFOR
+    ENDPROC
+            
+    PROC WASHER_FUNCTION()
+    !Move to base of the Washer station then grab the Washer 
+    MoveL BaseWashers,v500,FINE,My_Mechanism_2\WObj:=wobj0; 
+    MoveL offs(NewWasher,washerCol*85,0,50),v200,FINE,My_Mechanism_2\WObj:=wobj0; 
+    MoveL offs(NewWasher,washerCol*85,0,0),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !SIGNAL FOR TOOL CLOSING GRIPPER
+    SetDO GRIPPER, 1; 
+    WaitTime 1; 
+    MoveL offs(NewWasher,washerCol*85,0,50),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    !Place the Washer on the Shaft in the Measuring station
+    MoveL offs(MeasureStationWasher,0,0,30),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(MeasureStationWasher,0,0,10),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Open gripper to leave the Washer (The idea is that the washer now would be sinking into it's position by colliding with the shaft)
+    SetDO GRIPPER, 0;
+      WaitTime 1;
+    !Move up away from the washer
+    MoveL offs(MeasureStationWasher,0,0,50),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+
+    WaitTime 1;
+    !First move backwards, then rotate the gripper tool 180 degrees
+    MoveL RotateBackFromWasher1,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Now pick up the shaft with the Washer on
+    MoveJ BackFromStop,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(Stop1GetProduct,0,0,0),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 1;
+      WaitTime 1;
+    !Lift up the product before moving to the next step
+    MoveL offs(Stop1GetProduct,0,0,100),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    IF washerCol>5 THEN washerCol := 0; cycleCount := cycleCount + 1; ENDIF
+    
+    ENDPROC    
+
+    PROC GOOD_FUNCTION()
+    !Go get a WASHER 
+    WASHER_FUNCTION;
+    
+    !Go to the Press Station
+    PressStation;
+    
+    !Then leave the shafts in the GOOD STATION 
+    MoveL New_OtwGoodMag,v200,z100,My_Mechanism_2\WObj:=wobj0;
+            MoveL offs(New_GoodStation,-Goodcol*80,0,20),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+            MoveL offs(New_GoodStation,-Goodcol*80,0,-46),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 0;
+            WaitTime 1;
+            
+    !Lift up away from the product before leaving the Magazine 
+    MoveL offs(New_GoodStation,-Goodcol*80,0,20),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    IF Goodcol>5 THEN Goodcol := 0; cycleCount_Good := cycleCount_Good + 1; ENDIF
+    GoodCol := GoodCol +1; IF GoodCol >5 THEN GoodCol :=0;ENDIF 
+    
+    ENDPROC
+    
+    PROC REWORK_FUNCTION()
+    !Go to get a WASHER
+    WASHER_FUNCTION;
+    
+    !Go towards ReWork Magazine
+           MoveL New_OtwReWorkMag,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+           !Make sure it is high enough to not collide with the Products in the Good Magazine
+                   MoveL OtwReWorkMag2,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Go to the REWORK MAGAZINE
+            MoveL offs(New_ReWStation,-ReworkCol*80,0,100),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+            MoveL offs(New_ReWStation,-ReworkCol*80,0,50),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+            MoveL offs(New_ReWStation,-ReworkCol*80,0,-17),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 0;
+    WaitTime 1;
+
+    !Lift up before leaving 
+            MoveL offs(New_ReWStation,-ReworkCol*80,0,100),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+               
+    IF ReworkCol>5 THEN ReworkCol := 0; cycleCount_Re := cycleCount_Re + 1; ENDIF
+    ReworkCol := ReworkCol +1; IF ReworkCol >5 THEN ReworkCol :=0; ENDIF 
+    
+    ENDPROC
+    
+    PROC SCRAP_FUNCTION()
+    !Go get a Washer
+    WASHER_FUNCTION; 
+    !Move to BIN
+    MoveJ OtwBin,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(New_Bin,0,0,100),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL New_Bin,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 0; 
+    WaitTime 1;
+    ENDPROC
+      
+ !PRESS STATION
+    PROC PressStation()
+    !Move toward the PressStation
+    MoveJ OtwPressStation,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Move in position
+    MoveL offs(New_PressStation,0,0,55),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Bring the shaft down
+    MoveL offs(New_PressStation,0,0,-1),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Open GRIPPER
+    SetDO GRIPPER, 0;
+    WaitTime 1;
+    !Wait for PRESS PISTON to become TRUE
+    SetDO DO_PressPiston,1;
+    WaitTime 1;
+    !Wait for PRESS PISTON to become FALSE
+    SetDO DO_PressPiston,0;
+    WaitTime 1;
+    !Grip, Collect and Lift the target
+    SetDO GRIPPER, 1;
+    WaitTime 1;
+    MoveL offs(New_PressStation,0,0,55),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    !Go backwards
+    MoveL OtwPressStation,v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    ENDPROC
+    
+    PROC Pick_Shaft()
+    !Move to the approach the Shafts
+    MoveJ OtwShaft11,v100,z200,My_Mechanism_2\WObj:=wobj0;
+    
+    !Move above shaft, grip shaft, lift shaft
+    MoveL offs(ShaftPick12,shaftCol*50,0,150),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    MoveL offs(ShaftPick12,shaftCol*50,0,0),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    SetDO GRIPPER, 1; 
+    WaitTime 1;
+    MoveL offs(ShaftPick12,shaftCol*50,0,60),v200,FINE,My_Mechanism_2\WObj:=wobj0;
+    
+    IF shaftCol>5 THEN shaftCol := 0; cycleCount_Shaft := cycleCount_Shaft + 1; ENDIF
+    
+    ENDPROC
+    
+ENDMODULE
