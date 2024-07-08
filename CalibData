@@ -1,0 +1,7 @@
+MODULE CalibData
+    PERS tooldata My_Mechanism_1:=[TRUE,[[20,0,175],[0.707107,0,-0.707107,0]],[6,[0,0,100],[1,0,0,0],0,0,0]];
+    PERS tooldata My_Mechanism_2:=[TRUE,[[-20,0,175],[0,0.707107,0,0.707107]],[6,[0,0,100],[1,0,0,0],0,0,0]];
+    TASK PERS wobjdata Bin:=[FALSE,TRUE,"",[[13.3278,-566.31,397.616],[0.0067882,0.00193729,0.999928,0.00969826]],[[0,0,0],[1,0,0,0]]];
+    TASK PERS wobjdata GoodMagazine:=[FALSE,TRUE,"",[[400,-370,291],[0.707107,0,0,-0.707107]],[[0,0,0],[1,0,0,0]]];
+    TASK PERS wobjdata ReworkMagazine:=[FALSE,TRUE,"",[[400,-470,291],[0.707107,0,0,-0.707107]],[[0,0,0],[1,0,0,0]]];
+ENDMODULE
